@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!-- mapper 태그 내에 namespace 속성 지정 후 Mapper 인터페이스 위치 지정 -->
+<mapper namespace="com.chaehwi.shookream.mapper.MemberMapper">
+  
+  	<select id="getSelectPass" resultType="String">
+  		SELECT member_pass
+			FROM member
+			WHERE member_id = #{id}
+  	</select>
+  	
+  	<select id="selectMemberInfo" resultType="com.chaehwi.shookream.vo.MemberVo">
+  		SELECT *
+			FROM member
+			WHERE member_id = #{id}
+  	</select>
+  	
+  	<!-- 회원가입(member_idx)-->
+  	<select id="selectIdx" resultType="int">
+  		SELECT MAX(member_idx) 
+  			FROM member
+  	</select>
+  	
+  	<!-- 회원가입 -->
+  	<insert id="insertMember">
+  		INSERT INTO member
+  			VALUES (
+  				#{member_idx}
+  				,#{member_id}
+  				,#{member_name}
+  				,#{member_pass}
+  				,#{member_email}
+  				,#{member_phone}
+  				,now()
+  				,0
+  				,#{member_address}
+  				,'Y')
+  	</insert>
+  	
+  	<!-- 회원가입 : id 중복체크 -->
+  	<select id="selectAllId" resultType="int">
+  		SELECT COUNT(member_id) 
+  			FROM member
+  			WHERE member_id = #{id}
+  	</select>
+  	
+  	<!-- 회원가입 : 이메일 인증 1 resultType boolean으로 사용하기 위해서는 count(*)를써야함  -->
+   	<select id="selectAuth" resultType="boolean">
+  		SELECT COUNT(*)
+  			FROM auth
+  			WHERE auth_id=#{auth_id}
+  	</select>
+  	
+	<!-- 이메일인증1 : 이전 인증번호가 있을 시 --> 
+  	<update id="updateAuth">
+  		UPDATE auth
+  			SET auth_authCode=#{auth_authCode}
+  			WHERE auth_id=#{auth_id}
+  	</update>
+  	
+  	<!-- 이메일인증1 : 최초 인증 -->
+  	<insert id="insertAuth">
+  		INSERT INTO auth
+  			VALUES (#{auth_id}
+  			 ,#{auth_authCode})
+  	</insert>
+  	
+  	<!-- 이메일 인증2 : 인증코드 비교 -->
+  	<select id="selectMember" resultType="String">
+  		SELECT auth_authCode
+  			FROM auth
+  			WHERE auth_id = #{id} AND auth_authCode = #{authCode}
+  	</select>
+  	
+  	<!-- 회원정보 수정  -->
+  	<update id="updateMember">
+  		UPDATE member
+  			SET
+  				<if test='newpass1 neq null and newpass1 neq ""'>
+  					member_pass = #{newpass1},
+  				</if>
+  				<if test='addr neq null and addr neq ""'>  				
+  					member_address = #{addr},
+  				</if>
+  				member_phone = #{member.member_phone} 
+  			WHERE member_id = #{id}
+  	</update>
+  	
+  	<!-- 회원 탈퇴 -->
+  	<delete id="deleteMember">
+  		DELETE 
+  			FROM member
+  			WHERE member_id = #{member_id}
+  	</delete>
+  	
+  	<!-- 아이디 찾기 -->
+	<select id="findId" resultType="String">
+		SELECT member_id 
+			FROM member 
+				WHERE member_name=#{member_name} AND member_email=#{member_email}
+	</select>
+	
+	<!-- 아이디 유무 확인 -->
+	<select id="isLoginUser" resultType="boolean">
+		SELECT COUNT(member_id) FROM member WHERE member_id=#{member_id}
+	</select>
+	
+	<!--비밀번호 찾기  -->
+	<update id="updatePass">
+		UPDATE member 
+			SET member_pass=#{imsiPw}
+			WHERE member_id=#{vo.member_id}
+	</update>
+	
+	<!-- wish 조회 -->
+	<select id="selectWish" resultType="com.chaehwi.shookream.vo.WishVo">
+		SELECT product_idx
+			FROM wish
+			WHERE member_idx = #{member_idx}
+	</select>
+	
+	<!-- 회원가입 쿠폰 조회 -->
+	<select id="selectWelCoupon" resultType="com.chaehwi.shookream.vo.CouponVo">
+		SELECT *
+			FROM coupon
+			WHERE coupon_name 
+			LIKE '%회원가입%'
+	</select>
+	
+	<!-- 회원가입 쿠폰 지급 -->
+	<insert id="insertWelCoupon">
+		<selectKey keyProperty="member_coupon_idx" resultType="int" order="BEFORE">
+			SELECT MAX(member_coupon_idx) FROM member_coupon
+		</selectKey>
+		
+		INSERT INTO member_coupon 
+			VALUES (
+				(#{member_coupon_idx} + 1)
+				,#{member_idx}
+				,#{coupon.coupon_idx}
+				,#{coupon.coupon_name}
+				,#{coupon.coupon_benefit}
+				,#{coupon.coupon_benefit_price}
+				,#{coupon.coupon_benefit_unit}
+				,#{coupon.coupon_min_price}
+				,#{coupon.coupon_max_discount}
+				,0
+				,#{coupon.coupon_start}
+				,date_add(now(),interval 30 day)
+			)
+	</insert>
+</mapper>

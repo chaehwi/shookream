@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<!-- mapper 태그 내에 namespace 속성 지정 후 Mapper 인터페이스 위치 지정 -->
+<mapper namespace="com.chaehwi.shookream.mapper.CartMapper">
+<!-- -->
+	<select id="selectCartCount" resultType="int">
+	SELECT COUNT(*)
+		FROM cartlist_view
+			WHERE member_idx = #{member_idx}
+	</select>
+  <!--장바구니 목록 -->
+	<select id="getCartlist" resultType="com.chaehwi.shookream.vo.cartVo">
+	SELECT * 
+		FROM cartlist_view	
+			 WHERE member_idx=#{member_idx}
+		 		ORDER BY cart_idx DESC
+			 		LIMIT #{startRow},#{listLimit}
+	</select>
+	<!--장바구니 추가 전 product_idx 에 맞는 상품 정보 가져오기(image 테이블과 조인한 product_view 조회) -->
+	<select id="getProduct" resultType="com.chaehwi.shookream.vo.ProductVo">
+	SELECT *
+		FROM product_view
+			WHERE product_idx = #{product_idx}
+	
+	</select>
+	<!-- 추가 전 cart 테이블에 있는 지 확인 -->
+	<select id="getCartSelect" resultType="com.chaehwi.shookream.vo.cartVo">
+		SELECT *
+			FROM cart
+				WHERE product_idx = #{product_idx} AND member_idx = #{member_idx}
+	</select>
+	<!-- 이미 담긴 상품이 있는 경우 cart_count 만큼의 수량을 증가 -->
+	<update id="getUpdateCart" >
+		UPDATE cart
+			SET cart_count = cart_count + #{cart_count},
+				cart_price = cart_price + (product_price * #{cart_count}),
+				cart_order_price = cart_order_price + (product_release_price * #{cart_count})
+				
+				WHERE product_idx = #{product_idx} AND member_idx = #{member_idx}
+	</update>
+	<!-- 상세페이지에서 장바구니 추가 -->
+	<insert id="getInsertCart">
+<!-- 		<selectKey keyProperty="cart_idx" order="BEFORE" resultType="int"> -->
+<!-- 			SELECT MAX(cart_idx) FROM cart -->
+<!-- 		</selectKey> -->
+		
+		INSERT INTO cart
+			VALUES(
+			0,
+			#{member_idx},
+			#{product_idx},
+			now(),
+			(#{product.product_price} * #{cart_count}),
+			#{product.product_discount_price},
+			<if test="product.product_discount_price > 0">
+			(#{product.product_release_price} * #{cart_count}),
+			</if>
+			<if test="product.product_discount_price == 0">
+			(#{product.product_price} * #{cart_count}),
+			</if>
+			#{product.product_price},
+			#{product.product_release_price},
+			#{cart_count},
+			#{product.product_size},
+			#{product.product_color},
+			#{product.product_name},
+			#{product.image_main_file}
+			);
+	</insert>
+	<!-- 장바구니 삭제  -->
+	<delete id="getCartDelete">
+		DELETE FROM cart 
+			WHERE cart_idx=#{cart_idx } AND member_idx=#{member_idx}
+	</delete>
+	<!-- 장바구니 삭제(배열)  -->
+	<delete id="getCartDeleteArr">
+		DELETE FROM cart 
+			WHERE cart_idx IN 
+			<foreach collection="cart_idxArr" item="cart_idx" separator="," open="(" close=")"> 
+			#{cart_idx }
+			</foreach>
+			 AND member_idx=#{member_idx}
+	</delete>
+	<!-- 장바구니 -> 구매페이지 -->
+	<select id="getCartOrderList" resultType="com.chaehwi.shookream.vo.cartVo">
+		SELECT * 
+			FROM cartlist_view 
+				WHERE member_idx = #{member_idx} AND cart_idx = #{cart_idx}; 
+	</select>
+	<!-- 장바구니 수량 업데이트 -->
+	<update id="getAmountAdjust">
+		<selectKey  keyProperty="cart" resultType="com.chaehwi.shookream.vo.cartViewVo" order="BEFORE">
+			SELECT * 
+				FROM cartlist_view	
+					 WHERE member_idx=#{member_idx} AND cart_idx=#{cart_idx}
+		</selectKey>
+		UPDATE cart
+		<!--  1. 수량 업데이트 -->
+			SET cart_count = 
+			<if test="type.equals('plus')">
+			cart_count + 1,
+			</if>
+			<if test="type.equals('minus')">
+			cart_count - 1,
+			</if>
+			
+		<!-- 2. 수량에 따른 금액 변동 -->
+			<!-- cart_price : 상품 금액 , cart_order_price : 주문 금액 -->
+			
+			<!-- plus, minus에 따른 구분으로 plus일 경우 상품금액(cart_price)을 증가, minus일 경우는 감소 -->
+			<if test="type.equals('plus')">
+				cart_price = cart_price + (product_price * 1),
+			</if>
+			<if test="type.equals('minus')">
+				cart_price = cart_price - (product_price * 1),
+			</if>
+			
+			<!-- plus, minus에 따른 구분으로 plus일 경우 주문금액(cart_order_price)을 증가, minus일 경우는 감소 -->
+			<if test="type.equals('plus')">
+				<!-- 
+				** 할인율 유무에 따른 처리가 필요 ** 
+				=> release_price(할인 적용금액) 0인 경우 product_price로 금액을 증감작업 ! 
+				=> release_price(할인 적용금액) 0이 아닌 경우, release_price(할인 적용금액)으로 증감작업 !  
+				-->
+				<if test="cart.cart_discount == 0">
+				cart_order_price = cart_order_price + (product_price * 1)
+				</if>
+				<if test="cart.cart_discount > 0">
+				cart_order_price = cart_order_price + (product_release_price * 1)
+				</if>
+			</if>
+			
+			<if test="type.equals('minus')">
+				<!-- 
+				** 할인율 유무에 따른 처리가 필요 ** 
+				=> release_price(할인 적용금액) 0인 경우 product_price로 금액을 증감작업 ! 
+				=> release_price(할인 적용금액) 0이 아닌 경우, release_price(할인 적용금액)으로 증감작업 !  
+				-->
+				<if test="cart.cart_discount == 0">
+				cart_order_price = cart_order_price - (product_price * 1)
+				</if>
+				
+				<if test="cart.cart_discount > 0">
+				cart_order_price = cart_order_price - (product_release_price * 1)
+				</if>
+			</if>
+				WHERE cart_idx = #{cart_idx} AND member_idx = #{member_idx}
+		
+	
+	</update>
+	
+	<!-- 이미 구매한 상품이 있는지 확인 작업 -->
+	<select id="getCartOrderCount" resultType="int">
+		SELECT COUNT(*)
+			From orderlist
+			WHERE product_idx = #{product_idx}
+	</select>
+	
+	<!-- 다중 구매 처리 작업 -->
+	<insert id="insertCartOrder">
+		<selectKey keyProperty="cart_order_idx" resultType="int" order="BEFORE">
+			SELECT IFNULL(MAX(order_idx),0)
+			FROM orderlist
+		</selectKey>
+		INSERT INTO orderlist
+			VALUES(
+				#{cart_order_idx}+1,
+				now(),
+				#{cart_order_price},
+				'주문완료',
+				'결제완료',
+				#{member_idx},
+				#{product_idx},
+				#{cart_product_name},
+				#{cart_count},
+				#{cart_size},
+				#{cart_color}
+			)
+	</insert>
+	<!-- 상품 수량 빼기 작업 -->
+	<update id="updatePorduct_Amount">
+		UPDATE product
+			SET product_amount = product_amount - #{cart_count}
+			, product_sell_count = product_sell_count + #{cart_count}
+			WHERE product_idx = #{product_idx}
+	</update>
+	<!-- 주문 수량 더하기 작업 -->
+	<update id="updateOrder_Amount">
+		UPDATE orderlist
+			SET order_count = order_count + #{cart_count}
+			WHERE product_idx = #{product_idx}
+	</update>
+	
+	<insert id="insertCartOrderDetail">
+		<selectKey keyProperty="order_idx" resultType="int" order="BEFORE">
+			SELECT MAX(order_idx) FROM orderlist
+		</selectKey>
+		INSERT
+			INTO order_detail
+			VALUES(
+				#{order_idx}
+				,#{order.member_idx}
+				,#{order.product_idx}
+				,#{delivery.order_name}
+				,#{delivery.order_phone}
+				,CONCAT(#{delivery.order_addr1},",",#{delivery.order_addr2})
+				,#{delivery.order_content}
+			)
+	</insert>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

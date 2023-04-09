@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.chaehwi.shookream.mapper.CouponMapper">
+	
+	<select id="selectMainCoupon" resultType="com.chaehwi.shookream.vo.CouponVo">
+		SELECT c.coupon_content
+           	FROM member_coupon m join coupon c
+            ON m.coupon_idx = c.coupon_idx
+            WHERE coupon_content 
+            LIKE '%${coupon_content}%' AND member_idx = #{member_idx}
+	</select>
+	
+	<select id="selectMainCouponList" resultType="com.chaehwi.shookream.vo.CouponVo">
+		SELECT *
+			FROM coupon
+			WHERE coupon_content 
+            LIKE '%${coupon_content}%' 
+	</select>
+	
+	<select id="selectMemberCoupon" resultType="com.chaehwi.shookream.vo.CouponVo">
+		SELECT *
+			FROM coupon
+			WHERE coupon_content 
+            LIKE '%${coupon_content}%' 
+	</select>
+	
+	<!-- 쿠폰 다운 -->
+	<insert id="insertMemberCoupon">
+		<selectKey keyProperty="member_coupon_idx" resultType="int" order="BEFORE">
+			SELECT MAX(member_coupon_idx) FROM member_coupon
+		</selectKey>
+		
+		INSERT INTO member_coupon 
+			VALUES (
+				(#{member_coupon_idx} + 1)
+				,#{member_idx}
+				,#{coupon.coupon_idx}
+				,#{coupon.coupon_name}
+				,#{coupon.coupon_benefit}
+				,#{coupon.coupon_benefit_price}
+				,#{coupon.coupon_benefit_unit}
+				,#{coupon.coupon_min_price}
+				,#{coupon.coupon_max_discount}
+				,0
+				,#{coupon.coupon_start}
+				,#{coupon.coupon_end}
+			)
+	</insert>
+	
+	<!-- 관리자 쿠폰 목록 -->
+  	<select id="selectCouponList" resultType="com.chaehwi.shookream.vo.CouponVo">
+  		SELECT *
+  			FROM coupon
+  	</select>
+  	
+  	<!-- 관리자 쿠폰 수정폼 -->
+  	<select id="selectCoupon" resultType="com.chaehwi.shookream.vo.CouponVo">
+  		SELECT *
+  			FROM coupon
+  			WHERE coupon_idx = #{coupon_idx}
+  	</select>
+  	
+  	<!-- 관리자 쿠폰 수정 -->
+  	<update id="updateCoupon" >
+  		UPDATE coupon
+  			SET 
+				coupon_name = #{coupon_name}
+				,coupon_content = #{coupon_content}
+				,coupon_benefit = #{coupon_benefit}
+				,coupon_benefit_price = #{coupon_benefit_price}
+				,coupon_benefit_unit = #{coupon_benefit_unit}
+				,coupon_min_price = #{coupon_min_price}
+				,coupon_max_discount = #{coupon_max_discount}
+				,coupon_start = #{coupon_start}
+				,coupon_end = #{coupon_end}
+				,coupon_amount = #{coupon_amount}
+  			WHERE coupon_idx = #{coupon_idx}
+  	</update>
+  	
+  	<!-- 관리자 쿠폰 삭제 -->
+  	<delete id="deletCoupon" >
+  		DELETE 
+  			FROM coupon
+  			WHERE coupon_idx = #{coupon_idx}
+  	</delete>
+  	
+  	<!-- 관리자 쿠폰 등록 -->
+  	<insert id="insertCoupon">
+  		<selectKey keyProperty="coupon_idx" resultType="int" order="BEFORE">
+			SELECT MAX(coupon_idx) FROM coupon
+		</selectKey>
+		
+		INSERT INTO coupon 
+			VALUES (
+				(#{coupon_idx} + 1)
+				,#{coupon_name}
+				,#{coupon_content}
+				,#{coupon_benefit}
+				,#{coupon_benefit_price}
+				,#{coupon_benefit_unit}
+				,#{coupon_min_price}
+				,#{coupon_max_discount}
+				,#{coupon_start}
+				,#{coupon_end}
+				,now()
+				,#{coupon_amount}
+			)
+  	</insert>
+  	
+  	<select id="selectCouponCheck" resultType="int" >
+  		SELECT COUNT(coupon_idx)
+           	FROM member_coupon 
+            WHERE coupon_idx = #{coupon_idx} AND member_idx = #{member_idx}
+  	</select>
+  	
+  	<select id="selectMyCouponList" resultType="com.chaehwi.shookream.vo.CouponVo">
+  		SELECT *
+  			FROM member_coupon
+  			WHERE member_idx = #{member_idx} AND isUse = 0
+  	</select>
+  	
+  	<update id="updateCouponCount">
+  		UPDATE coupon
+  			SET coupon_amount = coupon_amount - 1
+  			WHERE coupon_idx = #{coupon_idx}
+  	</update>
+  	
+  	<select id="couponCountCheck" resultType="int">
+  		SELECT coupon_amount
+  			FROM coupon
+  			WHERE coupon_idx = #{coupon_idx}
+  	</select>
+</mapper>

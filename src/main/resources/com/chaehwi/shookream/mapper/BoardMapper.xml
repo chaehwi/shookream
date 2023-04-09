@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.chaehwi.shookream.mapper.BoardMapper">
+
+	<!-- 글쓰기 작업 -->
+	<insert id="insertBoard">
+		<selectKey keyProperty="notice_idx" resultType="int" order="BEFORE"> <!-- 글번호 -->
+			SELECT IFNULL(MAX(notice_idx),0)
+				FROM notice
+		</selectKey> <!-- 글번호 끝 -->
+
+		INSERT INTO notice
+			VALUES(
+				#{notice_idx}+1
+				,#{notice_category}
+				,#{notice_subject}
+				,#{notice_content}
+				,#{notice_readcount}
+				,now()
+				,#{notice_type}
+				)
+	</insert>
+	<!-- 글쓰기 작업 끝 -->
+
+	<!-- 공지목록 -->
+	<select id="selectBoardList" resultType="com.chaehwi.shookream.vo.BoardVo">
+		SELECT *
+			FROM notice
+			WHERE notice_type = #{notice_type} AND notice_subject
+				LIKE '%${keyword}%'
+				ORDER BY notice_idx DESC
+				LIMIT #{startRow},#{listLimit}
+	</select>
+	<!-- 공지목록 끝 -->
+
+	<!-- 공지목록 번호 -->
+	<select id="selectBoardListCount" resultType="int">
+		SELECT COUNT(*)
+			FROM notice
+			WHERE notice_type=#{notice_type}
+	</select>
+	<!-- 공지목록 번호 끝 -->
+
+	<!-- 공지 상세정보 & 수정 & 자주묻는질문 상세 -->
+	<update id="updateReadcount">
+		UPDATE notice
+			SET notice_readcount = notice_readcount+1
+			WHERE notice_idx=#{notice_idx}
+
+	</update>
+	<!-- 공지 상세정보 & 수정 & 자주묻는질문 상세 끝 -->
+
+	<!-- 공지 상세정보 및 수정 -->
+	<select id="selectBoard"
+		resultType="com.chaehwi.shookream.vo.BoardVo">
+		SELECT *
+			FROM notice
+			WHERE notice_idx = #{notice_idx}
+	</select>
+	<!-- 공지 상세정보 및 수정 끝 -->
+
+	<!-- 공지 수정 pro -->
+	<update id="updateBoard">
+		UPDATE notice
+			SET notice_subject = #{notice_subject}, notice_content = #{notice_content}
+			WHERE notice_idx = #{notice_idx}
+	</update>
+	<!-- 공지 수정 pro 끝 -->
+
+	<!-- 공지 삭제 -->
+	<delete id="deleteBoard">
+		DELETE FROM notice
+			WHERE notice_idx= #{notice_idx}
+	</delete>
+	<!-- 공지 삭제 -->
+	
+	<!-- 공지사항 게시판 카테고리별 모아보기 -->
+	<select id="selectBoardJson" resultType="com.chaehwi.shookream.vo.BoardVo">
+		SELECT *
+			FROM notice
+			WHERE notice_type = #{notice_type}
+			<if test='notice_category neq null and notice_category neq""'>		
+				AND notice_category = #{notice_category}
+			</if>
+				ORDER BY notice_idx DESC
+	</select>
+
+
+</mapper>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.chaehwi.shookream.mapper.WishMapper">
+	<!-- 좋아요 등록 하기 -->
+	<insert id="InsertLike">
+		<selectKey keyProperty="wish_idx" resultType="int" order="BEFORE">
+			<!-- 가장 큰 글번호(board_num) 조회 -->
+			SELECT IFNULL(MAX(wish_idx),0)
+			FROM wish
+		</selectKey>
+		INSERT
+			INTO wish
+			VALUES (
+				#{wish_idx} + 1
+				,#{member_idx}
+				,#{product_idx}	
+			)
+	</insert>
+	<!-- 좋아요 등록 하기 끝 -->
+	
+	<!-- 좋아요 삭제 하기 -->
+	<delete id="DeleteWish">
+		DELETE FROM wish 
+			WHERE member_idx=#{member_idx} AND product_idx=#{product_idx}
+	</delete>
+	<!-- 좋아요 삭제 하기 끝 -->
+	
+	<!-- 좋아요 리스트 출력 -->
+	<select id="getWishList" resultType="com.chaehwi.shookream.vo.ProductVo">
+		SELECT w.wish_idx, i.image_main_file,m.member_id,p.product_price,p.product_release_price,p.product_name,
+					p.product_brand,p.product_size,p.product_color,p.product_idx 
+					FROM wish w JOIN product p JOIN member m JOIN image i
+					ON w.product_idx = p.product_idx AND w.member_idx = m.member_idx AND w.product_idx = i.product_idx
+					WHERE m.member_idx=#{member_idx} 
+					LIMIT #{startRow},#{listLimit}
+	</select>	
+	<!-- 좋아요 리스트 출력 끝 -->
+	
+	<!-- 좋아요 카운트 확인 -->
+	<select id="getWishListCount" resultType="int">
+		SELECT COUNT(wish_idx) 
+				FROM wish
+				WHERE member_idx = #{member_idx}
+	</select>
+	<!-- 좋아요 카운트 확인 끝 -->
+	
+	<!-- 좋아요 + 1 -->
+	<update id="updateWishCount">
+		UPDATE product p INNER JOIN wish w 
+					ON p.product_idx = w.product_idx 
+					SET p.product_wishcount = p.product_wishcount+1
+					WHERE p.product_idx = #{product_idx}
+	</update>
+	<!-- 좋아요 + 1 끝 -->
+	
+	<!-- 좋아요 - 1 -->
+	<update id="DecWishCount">
+		UPDATE product  
+				SET product_wishcount = product_wishcount-1
+				WHERE product_idx = #{product_idx}
+	</update>
+	<!-- 좋아요 -1 끝  -->	
+	
+	<select id="wishCheck" resultType="int">
+		SELECT COUNT(wish_idx)
+			FROM wish
+			WHERE product_idx = #{product_idx} AND member_idx = #{member_idx}
+	</select>
+</mapper>
